@@ -1,0 +1,28 @@
+# Dependencies and Version Control
+**/.git
+**/.svn
+**/.hg
+**/node_modules
+**/*.gen.ts
+
+# Turbo
+.turbo
+**/.turbo
+
+# Vite
+dist
+**/dist
+build
+**/build
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+coverage
+**/coverage
+
+# Lock files
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
