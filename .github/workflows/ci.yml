@@ -1,0 +1,49 @@
+name: Pipeline de Integração Contínua
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  verificacoes:
+    name: Build, Lint e Testes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Realizar clone limpo do repositório
+        uses: actions/checkout@v4
+        
+      - name: Configurar ambiente Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Verificar build 
+        run: npm run build
+
+      - name: Executar análise estática (lint)
+        run: npm run lint
+
+      - name: Executar testes
+        run: npm run test:run
+
+      - name: Verificar cobertura de testes
+        run: npm run test:coverage
+
+      - name: Disponibilizar relatório de cobertura de testes
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relatorio-cobertura-testes
+          path: coverage/
+          retention-days: 7
+        
