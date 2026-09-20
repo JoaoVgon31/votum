@@ -5,3 +5,4 @@ Plataforma web modular para orquestração de processos deliberativos e votaçõ
 |Nome|RA|
 |-|-|
 |Enzo Bertoloti|248361|
+|João Vitor Gonçalves Oliveira|237871|
