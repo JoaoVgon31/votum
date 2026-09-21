@@ -131,7 +131,11 @@ describe('Ata de resultado', () => {
       // Cada eleitor presente registra no máximo uma cédula (Issue 3).
       expect(() =>
         gerarAta(
-          criarDados({ totalPresencas: 30, totalVotos: 31, totalEleitores: 100 }),
+          criarDados({
+            totalPresencas: 30,
+            totalVotos: 31,
+            totalEleitores: 100,
+          }),
         ),
       ).toThrow(DadosAtaInvalidosError);
     });
@@ -139,7 +143,11 @@ describe('Ata de resultado', () => {
     it('deve aceitar total de votos igual ao total de presenças', () => {
       expect(() =>
         gerarAta(
-          criarDados({ totalPresencas: 30, totalVotos: 30, totalEleitores: 100 }),
+          criarDados({
+            totalPresencas: 30,
+            totalVotos: 30,
+            totalEleitores: 100,
+          }),
         ),
       ).not.toThrow();
     });
