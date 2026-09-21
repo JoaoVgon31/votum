@@ -26,6 +26,11 @@ function validarDados(dados: DadosAta): void {
       'O total de votos deve ser um número inteiro maior ou igual a zero.',
     );
   }
+  if (dados.totalVotos > dados.totalPresencas) {
+    throw new DadosAtaInvalidosError(
+      'O total de votos não pode exceder o total de presenças: cada eleitor presente registra no máximo uma cédula.',
+    );
+  }
 }
 
 /**
@@ -43,13 +48,14 @@ export function gerarAta(dados: DadosAta): AtaResultado {
     totalVotos: dados.totalVotos,
     totalEleitores: dados.totalEleitores,
     totalPresencas: dados.totalPresencas,
-    participacao:
-      Math.round((dados.totalPresencas / dados.totalEleitores) * 10000) / 100,
+    // Reaproveita o cálculo do AvaliadorQuorum em vez de recalcular a
+    // participação aqui, para não manter duas fórmulas em sincronia.
+    participacao: Math.round(dados.resultadoQuorum.participacao * 100) / 100,
     geradaEm: (dados.geradaEm ?? new Date()).toISOString(),
   };
 }
 
-/** Formata a ata.*/
+/** Formata a ata como texto*/
 export function formatarAtaComoTexto(ata: AtaResultado): string {
   const linhas = [
     'ATA DE RESULTADO',
@@ -72,7 +78,7 @@ export function formatarAtaComoTexto(ata: AtaResultado): string {
   return linhas.join('\n');
 }
 
-/** Formata a ata como JSON. */
+/** Formata a ata como JSON*/
 export function formatarAtaComoJson(ata: AtaResultado): string {
   return JSON.stringify(ata, null, 2);
 }

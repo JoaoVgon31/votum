@@ -1,8 +1,9 @@
+import type { ResultadoQuorum } from '../quorum/EstrategiaQuorum.ts';
 import type { StatusFinalSessao } from '../quorum/StatusFinalSessao.ts';
 
 /** Dados consolidados necessários para emitir a ata de uma sessão. */
 export interface DadosAta {
-  /** Título da sessão */
+  /** Título da sessão (ex.: "Eleição Centro Acadêmico 2026"). */
   titulo: string;
   /** Estado final da sessão após a verificação de quórum. */
   status: StatusFinalSessao;
@@ -14,11 +15,16 @@ export interface DadosAta {
   totalEleitores: number;
   /** Tamanho da lista de presença. */
   totalPresencas: number;
+  /**
+   * Resultado já calculado pelo AvaliadorQuorum. A participação exibida na
+   * ata vem dele, para não recalcular a mesma conta em dois lugares.
+   */
+  resultadoQuorum: ResultadoQuorum;
   /** Momento da emissão; se omitido, usa o instante atual. */
   geradaEm?: Date;
 }
 
-/** Ata de resultado já consolidada . */
+/** Ata de resultado já consolidada (serializável em JSON). */
 export interface AtaResultado {
   titulo: string;
   status: StatusFinalSessao;
@@ -29,6 +35,6 @@ export interface AtaResultado {
   totalPresencas: number;
   /** Participação em percentual, com duas casas decimais. */
   participacao: number;
-  /** Data/hora de emissão. */
+  /** Data/hora de emissão no formato ISO 8601. */
   geradaEm: string;
 }
