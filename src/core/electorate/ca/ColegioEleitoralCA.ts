@@ -14,7 +14,7 @@ export class ColegioEleitoralCA implements ColegioEleitoral {
   public verificarAptidao(identificador: string): void {
     const identificadorLimpo = identificador.trim();
     if (!this.eleitoresAptos.has(identificadorLimpo)) {
-      throw new EleitorInaptoError(identificador);
+      throw new EleitorInaptoError(identificadorLimpo);
     }
   }
 }

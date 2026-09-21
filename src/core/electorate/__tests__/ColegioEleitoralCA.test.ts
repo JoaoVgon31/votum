@@ -54,5 +54,17 @@ describe('ColegioEleitoralCA - Importação do colégio eleitoral e validação 
         }),
       );
     });
+
+    it('deve adicionar o identificador limpo (sem espaços em branco)na estrutura da exceção lançada quando a matrícula não consta no colégio eleitoral', () => {
+      const colegioEleitoralCA = new ColegioEleitoralCA(colegioEleitoralCAMock);
+      expect(() => {
+        colegioEleitoralCA.verificarAptidao('  202605  ');
+      }).toThrow(
+        expect.objectContaining({
+          name: 'EleitorInaptoError',
+          identificador: '202605',
+        }),
+      );
+    });
   });
 });
