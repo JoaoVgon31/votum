@@ -1,5 +1,6 @@
 import type { Cedula } from './Cedula.ts';
 import {
+  CedulaDuplicadaError,
   OperacaoInvalidaError,
   SessaoNaoAbertaError,
   TransicaoInvalidaError,
@@ -87,8 +88,22 @@ export class SessaoVotacao {
   }
 
   /**
+   * Transiciona a sessão de EmApuracao para Concluida.
+   */
+  public encerrarApuracao(): void {
+    if (this._status !== StatusSessao.EM_APURACAO) {
+      throw new TransicaoInvalidaError(
+        `Transição inválida: não é possível encerrar apuração em uma sessão com status "${this._status}". A sessão precisa estar em apuração.`
+      );
+    }
+    this._status = StatusSessao.CONCLUIDA;
+  }
+
+
+  /**
    * Registra uma cédula de voto na urna.
    * Só é permitido quando a sessão está no estado Aberta.
+   * Rejeita cédulas duplicadas cujo ID já conste na sessão.
    */
   public registrarVoto(cedula: Cedula): void {
     if (this._status !== StatusSessao.ABERTA) {
@@ -96,6 +111,14 @@ export class SessaoVotacao {
         `Tentativa de registrar voto rejeitada: a sessão está no estado "${this._status}". O voto só pode ser registrado quando a sessão estiver Aberta.`
       );
     }
+
+    const cedulaExistente = this._cedulas.some((c) => c.id === cedula.id);
+    if (cedulaExistente) {
+      throw new CedulaDuplicadaError(
+        `Tentativa de registrar voto rejeitada: a cédula com o id "${cedula.id}" já foi registrada nesta sessão.`
+      );
+    }
+
     this._cedulas.push({
       ...cedula,
     });
@@ -112,6 +135,12 @@ export class SessaoVotacao {
     if (this._status === StatusSessao.EM_APURACAO) {
       throw new OperacaoInvalidaError(
         'Não é permitido cancelar uma sessão que já se encontra em apuração.'
+      );
+    }
+
+    if (this._status === StatusSessao.CONCLUIDA) {
+      throw new OperacaoInvalidaError(
+        'Não é permitido cancelar uma sessão que já foi concluída.'
       );
     }
 

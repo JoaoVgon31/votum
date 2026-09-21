@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   type Cedula,
+  CedulaDuplicadaError,
   OperacaoInvalidaError,
   SessaoNaoAbertaError,
   SessaoVotacao,
@@ -32,7 +33,7 @@ describe('SessaoVotacao - Gerenciamento do ciclo de vida', () => {
   });
 
   describe('Critério 2: Transições sequenciais de estado', () => {
-    it('deve permitir a transição sequencial completa: EmConfiguracao -> Agendada -> Aberta -> EmApuracao', () => {
+    it('deve permitir a transição sequencial completa: EmConfiguracao -> Agendada -> Aberta -> EmApuracao -> Concluida', () => {
       const sessao = criarSessaoExemplo();
 
       // EmConfiguracao -> Agendada
@@ -46,6 +47,10 @@ describe('SessaoVotacao - Gerenciamento do ciclo de vida', () => {
       // Aberta -> EmApuracao
       sessao.iniciarApuracao();
       expect(sessao.status).toBe(StatusSessao.EM_APURACAO);
+
+      // EmApuracao -> Concluida
+      sessao.encerrarApuracao();
+      expect(sessao.status).toBe(StatusSessao.CONCLUIDA);
     });
 
     it('deve permitir retornar de Agendada para EmConfiguracao ao revisar configurações', () => {
@@ -98,6 +103,46 @@ describe('SessaoVotacao - Gerenciamento do ciclo de vida', () => {
         sessao.revisarConfiguracao();
       }).toThrow(TransicaoInvalidaError);
     });
+
+    it('deve lançar TransicaoInvalidaError ao tentar encerrar apuração a partir de EmConfiguracao', () => {
+      const sessao = criarSessaoExemplo();
+      expect(() => {
+        sessao.encerrarApuracao();
+      }).toThrow(TransicaoInvalidaError);
+      expect(sessao.status).toBe(StatusSessao.EM_CONFIGURACAO);
+    });
+
+    it('deve lançar TransicaoInvalidaError ao tentar encerrar apuração a partir de Agendada', () => {
+      const sessao = criarSessaoExemplo();
+      sessao.agendar();
+      expect(() => {
+        sessao.encerrarApuracao();
+      }).toThrow(TransicaoInvalidaError);
+      expect(sessao.status).toBe(StatusSessao.AGENDADA);
+    });
+
+    it('deve lançar TransicaoInvalidaError ao tentar encerrar apuração a partir de Aberta', () => {
+      const sessao = criarSessaoExemplo();
+      sessao.agendar();
+      sessao.abrir();
+      expect(() => {
+        sessao.encerrarApuracao();
+      }).toThrow(TransicaoInvalidaError);
+      expect(sessao.status).toBe(StatusSessao.ABERTA);
+    });
+
+    it('deve lançar TransicaoInvalidaError ao tentar encerrar apuração quando a sessão já está Concluida', () => {
+      const sessao = criarSessaoExemplo();
+      sessao.agendar();
+      sessao.abrir();
+      sessao.iniciarApuracao();
+      sessao.encerrarApuracao();
+
+      expect(() => {
+        sessao.encerrarApuracao();
+      }).toThrow(TransicaoInvalidaError);
+      expect(sessao.status).toBe(StatusSessao.CONCLUIDA);
+    });
   });
 
   describe('Critério 3: Bloqueio de registro de votos fora do estado Aberta', () => {
@@ -145,6 +190,18 @@ describe('SessaoVotacao - Gerenciamento do ciclo de vida', () => {
     it('deve lançar SessaoNaoAbertaError ao tentar registrar voto no estado Cancelada', () => {
       const sessao = criarSessaoExemplo();
       sessao.cancelar();
+
+      expect(() => {
+        sessao.registrarVoto(criarCedula());
+      }).toThrow(SessaoNaoAbertaError);
+    });
+
+    it('deve lançar SessaoNaoAbertaError ao tentar registrar voto no estado Concluida', () => {
+      const sessao = criarSessaoExemplo();
+      sessao.agendar();
+      sessao.abrir();
+      sessao.iniciarApuracao();
+      sessao.encerrarApuracao();
 
       expect(() => {
         sessao.registrarVoto(criarCedula());
@@ -223,6 +280,63 @@ describe('SessaoVotacao - Gerenciamento do ciclo de vida', () => {
         sessao.cancelar();
       }).toThrow(OperacaoInvalidaError);
       expect(sessao.status).toBe(StatusSessao.EM_APURACAO);
+    });
+
+    it('deve lançar OperacaoInvalidaError ao tentar cancelar uma sessão que já está Concluida', () => {
+      const sessao = criarSessaoExemplo();
+      sessao.agendar();
+      sessao.abrir();
+      sessao.iniciarApuracao();
+      sessao.encerrarApuracao();
+
+      expect(() => {
+        sessao.cancelar();
+      }).toThrow(OperacaoInvalidaError);
+      expect(sessao.status).toBe(StatusSessao.CONCLUIDA);
+    });
+  });
+
+  describe('Prevenção de registro de cédulas duplicadas', () => {
+    it('deve permitir registrar múltiplas cédulas com IDs distintos', () => {
+      const sessao = criarSessaoExemplo();
+      sessao.agendar();
+      sessao.abrir();
+
+      sessao.registrarVoto(criarCedula('cedula-1', 'CHAPA_1'));
+      sessao.registrarVoto(criarCedula('cedula-2', 'CHAPA_2'));
+      sessao.registrarVoto(criarCedula('cedula-3', 'BRANCO'));
+
+      expect(sessao.totalCedulas).toBe(3);
+      expect(sessao.cedulas.map((c) => c.id)).toEqual(['cedula-1', 'cedula-2', 'cedula-3']);
+    });
+
+    it('deve lançar CedulaDuplicadaError ao tentar registrar cédula com id duplicado', () => {
+      const sessao = criarSessaoExemplo();
+      sessao.agendar();
+      sessao.abrir();
+
+      sessao.registrarVoto(criarCedula('cedula-1', 'CHAPA_1'));
+
+      expect(() => {
+        sessao.registrarVoto(criarCedula('cedula-1', 'CHAPA_2'));
+      }).toThrow(CedulaDuplicadaError);
+    });
+
+    it('não deve alterar a urna ao rejeitar uma cédula com id duplicado', () => {
+      const sessao = criarSessaoExemplo();
+      sessao.agendar();
+      sessao.abrir();
+
+      sessao.registrarVoto(criarCedula('cedula-1', 'CHAPA_1'));
+      expect(sessao.totalCedulas).toBe(1);
+
+      expect(() => {
+        sessao.registrarVoto(criarCedula('cedula-1', 'OUTRA_CHAPA'));
+      }).toThrow(CedulaDuplicadaError);
+
+      expect(sessao.totalCedulas).toBe(1);
+      expect(sessao.cedulas).toHaveLength(1);
+      expect(sessao.cedulas[0].conteudo).toBe('CHAPA_1');
     });
   });
 });
