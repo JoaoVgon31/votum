@@ -3,6 +3,7 @@ export const StatusSessao = {
   AGENDADA: 'Agendada',
   ABERTA: 'Aberta',
   EM_APURACAO: 'EmApuracao',
+  CONCLUIDA: 'Concluida',
   CANCELADA: 'Cancelada',
 } as const;
 
