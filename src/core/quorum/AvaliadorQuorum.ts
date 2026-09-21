@@ -3,9 +3,7 @@ import { QuorumMinimoPercentual } from './QuorumMinimoPercentual.ts';
 import { StatusFinalSessao } from './StatusFinalSessao.ts';
 
 /**
- * O que o avaliador precisa conhecer de uma sessão.
- * Manter isto como interface isola o quórum da implementação concreta da
- * sessão, da lista de presença e do colégio eleitoral.
+ * Implementa o que o avaliador precisa conhecer de uma sessão.
  */
 export interface SessaoAvaliavelPorQuorum {
   /** Tamanho da "lista de presença" (quem já votou). */

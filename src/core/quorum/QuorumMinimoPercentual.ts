@@ -31,7 +31,6 @@ export class QuorumMinimoPercentual implements EstrategiaQuorum {
     this.validarContagens(totalPresencas, totalEleitores);
 
     return {
-      // Multiplicação cruzada evita erros de arredondamento da divisão em ponto flutuante.
       atingido: totalPresencas * 100 >= totalEleitores * this.percentualMinimo,
       participacao: (totalPresencas / totalEleitores) * 100,
       percentualMinimo: this.percentualMinimo,
