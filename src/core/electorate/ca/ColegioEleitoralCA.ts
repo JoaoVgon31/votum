@@ -1,4 +1,5 @@
 import type { ColegioEleitoral } from '../ColegioEleitoral';
+import { EleitorInaptoError } from '../errors/ColegioEleitoralError';
 import eleitoresAptosCA from './eleitores_aptos_ca.json';
 
 export class ColegioEleitoralCA implements ColegioEleitoral {
@@ -10,7 +11,9 @@ export class ColegioEleitoralCA implements ColegioEleitoral {
     this.eleitoresAptos = new Set(eleitoresAptos);
   }
 
-  public verificarAptidao(identificador: string): boolean {
-    return this.eleitoresAptos.has(identificador);
+  public verificarAptidao(identificador: string): void {
+    if (!this.eleitoresAptos.has(identificador)) {
+      throw new EleitorInaptoError(identificador);
+    }
   }
 }

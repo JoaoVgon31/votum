@@ -1,3 +1,3 @@
 export interface ColegioEleitoral {
-  verificarAptidao(identificador: string): boolean;
+  verificarAptidao(identificador: string): void;
 }
