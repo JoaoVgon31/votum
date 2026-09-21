@@ -1,5 +1,6 @@
 export type { Cedula } from './Cedula.ts';
 export {
+  CedulaDuplicadaError,
   OperacaoInvalidaError,
   SessaoError,
   SessaoNaoAbertaError,

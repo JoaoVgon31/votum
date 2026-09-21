@@ -25,3 +25,13 @@ export class OperacaoInvalidaError extends SessaoError {
     this.name = 'OperacaoInvalidaError';
   }
 }
+
+export class CedulaDuplicadaError extends OperacaoInvalidaError {
+  constructor(
+    message = 'Não é permitido registrar cédula duplicada: já existe uma cédula com este identificador na sessão.'
+  ) {
+    super(message);
+    this.name = 'CedulaDuplicadaError';
+  }
+}
+
