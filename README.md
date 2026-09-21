@@ -6,3 +6,4 @@ Plataforma web modular para orquestração de processos deliberativos e votaçõ
 |-|-|
 |Enzo Bertoloti|248361|
 |João Vitor Gonçalves Oliveira|237871|
+|Everton Mendes de Almeida|260426|
