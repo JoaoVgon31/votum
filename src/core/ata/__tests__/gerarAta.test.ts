@@ -127,6 +127,26 @@ describe('Ata de resultado', () => {
       );
     });
 
+    it.each([
+      [
+        'totalEleitores',
+        'O total de eleitores deve ser um número inteiro maior que zero.',
+      ],
+      [
+        'totalPresencas',
+        'O total de presenças deve ser um número inteiro maior ou igual a zero.',
+      ],
+      [
+        'totalVotos',
+        'O total de votos deve ser um número inteiro maior ou igual a zero.',
+      ],
+    ] as const)(
+      'deve rejeitar %s fracionário com a mensagem do campo',
+      (campo, mensagem) => {
+        expect(() => gerarAta(criarDados({ [campo]: 2.5 }))).toThrow(mensagem);
+      },
+    );
+
     it('deve rejeitar total de votos maior que o total de presenças', () => {
       // Cada eleitor presente registra no máximo uma cédula (Issue 3).
       expect(() =>
