@@ -1,10 +1,10 @@
 import type { Cedula } from './Cedula.ts';
 import {
-  CedulaDuplicadaError,
   OperacaoInvalidaError,
   SessaoNaoAbertaError,
   TransicaoInvalidaError,
 } from './errors/SessaoError.ts';
+import { Urna } from './Urna.ts';
 import { StatusSessao } from './StatusSessao.ts';
 
 /**
@@ -15,7 +15,7 @@ export class SessaoVotacao {
   public readonly id: string;
   public readonly titulo: string;
   private _status: StatusSessao;
-  private _cedulas: Cedula[] = [];
+  private readonly _urna: Urna = new Urna();
 
   constructor(id: string, titulo: string) {
     this.id = id;
@@ -28,14 +28,14 @@ export class SessaoVotacao {
   }
 
   public get totalCedulas(): number {
-    return this._cedulas.length;
+    return this._urna.total;
   }
 
   /**
    * Retorna uma cópia imutável das cédulas registradas na urna.
    */
   public get cedulas(): readonly Cedula[] {
-    return [...this._cedulas];
+    return this._urna.listar();
   }
 
 
@@ -112,16 +112,7 @@ export class SessaoVotacao {
       );
     }
 
-    const cedulaExistente = this._cedulas.some((c) => c.id === cedula.id);
-    if (cedulaExistente) {
-      throw new CedulaDuplicadaError(
-        `Tentativa de registrar voto rejeitada: a cédula com o id "${cedula.id}" já foi registrada nesta sessão.`
-      );
-    }
-
-    this._cedulas.push({
-      ...cedula,
-    });
+    this._urna.registrar(cedula);
   }
 
   /**
@@ -145,6 +136,6 @@ export class SessaoVotacao {
     }
 
     this._status = StatusSessao.CANCELADA;
-    this._cedulas = [];
+    this._urna.esvaziar();
   }
 }
