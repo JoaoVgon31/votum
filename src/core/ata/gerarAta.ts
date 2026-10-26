@@ -2,30 +2,35 @@ import { StatusFinalSessao } from '../quorum/StatusFinalSessao.ts';
 import type { AtaResultado, DadosAta } from './AtaResultado.ts';
 import { DadosAtaInvalidosError } from './errors/AtaError.ts';
 
+/**
+ * Exige um inteiro maior ou igual a `minimo`. As três contagens da ata
+ * repetiam essa checagem, cada uma com a sua cópia da condição.
+ */
+function exigirInteiro(
+  valor: number,
+  minimo: number,
+  nomeDoCampo: string,
+): void {
+  if (!Number.isInteger(valor) || valor < minimo) {
+    const limite = minimo === 0 ? 'maior ou igual a zero' : 'maior que zero';
+    throw new DadosAtaInvalidosError(
+      `O ${nomeDoCampo} deve ser um número inteiro ${limite}.`,
+    );
+  }
+}
+
 function validarDados(dados: DadosAta): void {
   if (dados.titulo.trim() === '') {
     throw new DadosAtaInvalidosError('O título da sessão é obrigatório.');
   }
-  if (!Number.isInteger(dados.totalEleitores) || dados.totalEleitores <= 0) {
-    throw new DadosAtaInvalidosError(
-      'O total de eleitores deve ser um número inteiro maior que zero.',
-    );
-  }
-  if (!Number.isInteger(dados.totalPresencas) || dados.totalPresencas < 0) {
-    throw new DadosAtaInvalidosError(
-      'O total de presenças deve ser um número inteiro maior ou igual a zero.',
-    );
-  }
+  exigirInteiro(dados.totalEleitores, 1, 'total de eleitores');
+  exigirInteiro(dados.totalPresencas, 0, 'total de presenças');
   if (dados.totalPresencas > dados.totalEleitores) {
     throw new DadosAtaInvalidosError(
       'O total de presenças não pode exceder o total de eleitores.',
     );
   }
-  if (!Number.isInteger(dados.totalVotos) || dados.totalVotos < 0) {
-    throw new DadosAtaInvalidosError(
-      'O total de votos deve ser um número inteiro maior ou igual a zero.',
-    );
-  }
+  exigirInteiro(dados.totalVotos, 0, 'total de votos');
   if (dados.totalVotos > dados.totalPresencas) {
     throw new DadosAtaInvalidosError(
       'O total de votos não pode exceder o total de presenças: cada eleitor presente registra no máximo uma cédula.',
