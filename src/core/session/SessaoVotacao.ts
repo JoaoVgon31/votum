@@ -1,9 +1,6 @@
 import type { Cedula } from './Cedula.ts';
-import {
-  OperacaoInvalidaError,
-  SessaoNaoAbertaError,
-  TransicaoInvalidaError,
-} from './errors/SessaoError.ts';
+import { criarEstado } from './estado/estados.ts';
+import type { EstadoSessao } from './estado/EstadoSessao.ts';
 import { Urna } from './Urna.ts';
 import { StatusSessao } from './StatusSessao.ts';
 
@@ -14,17 +11,17 @@ import { StatusSessao } from './StatusSessao.ts';
 export class SessaoVotacao {
   public readonly id: string;
   public readonly titulo: string;
-  private _status: StatusSessao;
+  private _estado: EstadoSessao;
   private readonly _urna: Urna = new Urna();
 
   constructor(id: string, titulo: string) {
     this.id = id;
     this.titulo = titulo;
-    this._status = StatusSessao.EM_CONFIGURACAO;
+    this._estado = criarEstado(StatusSessao.EM_CONFIGURACAO);
   }
 
   public get status(): StatusSessao {
-    return this._status;
+    return this._estado.status;
   }
 
   public get totalCedulas(): number {
@@ -38,67 +35,40 @@ export class SessaoVotacao {
     return this._urna.listar();
   }
 
-
   /**
    * Transiciona a sessão de EmConfiguracao para Agendada.
    */
   public agendar(): void {
-    if (this._status !== StatusSessao.EM_CONFIGURACAO) {
-      throw new TransicaoInvalidaError(
-        `Transição inválida: não é possível agendar uma sessão com status "${this._status}".`
-      );
-    }
-    this._status = StatusSessao.AGENDADA;
+    this._estado = criarEstado(this._estado.agendar());
   }
 
   /**
    * Retorna a sessão para EmConfiguracao para ajuste de parâmetros.
    */
   public revisarConfiguracao(): void {
-    if (this._status !== StatusSessao.AGENDADA) {
-      throw new TransicaoInvalidaError(
-        `Transição inválida: só é possível revisar configurações de uma sessão com status "${StatusSessao.AGENDADA}".`
-      );
-    }
-    this._status = StatusSessao.EM_CONFIGURACAO;
+    this._estado = criarEstado(this._estado.revisarConfiguracao());
   }
 
   /**
    * Transiciona a sessão de Agendada para Aberta.
    */
   public abrir(): void {
-    if (this._status !== StatusSessao.AGENDADA) {
-      throw new TransicaoInvalidaError(
-        `Transição inválida: não é possível abrir uma sessão com status "${this._status}". A sessão deve estar agendada.`
-      );
-    }
-    this._status = StatusSessao.ABERTA;
+    this._estado = criarEstado(this._estado.abrir());
   }
 
   /**
    * Transiciona a sessão de Aberta para EmApuracao.
    */
   public iniciarApuracao(): void {
-    if (this._status !== StatusSessao.ABERTA) {
-      throw new TransicaoInvalidaError(
-        `Transição inválida: não é possível iniciar apuração em uma sessão com status "${this._status}". A sessão precisa estar aberta.`
-      );
-    }
-    this._status = StatusSessao.EM_APURACAO;
+    this._estado = criarEstado(this._estado.iniciarApuracao());
   }
 
   /**
    * Transiciona a sessão de EmApuracao para Concluida.
    */
   public encerrarApuracao(): void {
-    if (this._status !== StatusSessao.EM_APURACAO) {
-      throw new TransicaoInvalidaError(
-        `Transição inválida: não é possível encerrar apuração em uma sessão com status "${this._status}". A sessão precisa estar em apuração.`
-      );
-    }
-    this._status = StatusSessao.CONCLUIDA;
+    this._estado = criarEstado(this._estado.encerrarApuracao());
   }
-
 
   /**
    * Registra uma cédula de voto na urna.
@@ -106,12 +76,7 @@ export class SessaoVotacao {
    * Rejeita cédulas duplicadas cujo ID já conste na sessão.
    */
   public registrarVoto(cedula: Cedula): void {
-    if (this._status !== StatusSessao.ABERTA) {
-      throw new SessaoNaoAbertaError(
-        `Tentativa de registrar voto rejeitada: a sessão está no estado "${this._status}". O voto só pode ser registrado quando a sessão estiver Aberta.`
-      );
-    }
-
+    this._estado.garantirRegistroPermitido();
     this._urna.registrar(cedula);
   }
 
@@ -119,23 +84,7 @@ export class SessaoVotacao {
    * Cancela a sessão de votação e descarta todas as cédulas em memória.
    */
   public cancelar(): void {
-    if (this._status === StatusSessao.CANCELADA) {
-      throw new OperacaoInvalidaError('A sessão de votação já está cancelada.');
-    }
-
-    if (this._status === StatusSessao.EM_APURACAO) {
-      throw new OperacaoInvalidaError(
-        'Não é permitido cancelar uma sessão que já se encontra em apuração.'
-      );
-    }
-
-    if (this._status === StatusSessao.CONCLUIDA) {
-      throw new OperacaoInvalidaError(
-        'Não é permitido cancelar uma sessão que já foi concluída.'
-      );
-    }
-
-    this._status = StatusSessao.CANCELADA;
+    this._estado = criarEstado(this._estado.cancelar());
     this._urna.esvaziar();
   }
 }
