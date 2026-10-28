@@ -8,3 +8,4 @@ export {
 } from './errors/SessaoError.ts';
 export { SessaoVotacao } from './SessaoVotacao.ts';
 export { StatusSessao } from './StatusSessao.ts';
+export { Urna } from './Urna.ts';
