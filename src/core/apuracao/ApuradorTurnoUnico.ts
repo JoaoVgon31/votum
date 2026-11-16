@@ -96,6 +96,11 @@ export class ApuradorTurnoUnico {
         'A apuração exige ao menos uma chapa concorrente.',
       );
     }
+    if (chapas.some((chapa) => chapa.trim().length === 0)) {
+      throw new ParametrosApuracaoInvalidosError(
+        'Nenhuma chapa pode ter identificador vazio ou composto apenas por espaços.',
+      );
+    }
     if (new Set(chapas).size !== chapas.length) {
       throw new ParametrosApuracaoInvalidosError(
         'A lista de chapas concorrentes não pode ter identificadores repetidos.',

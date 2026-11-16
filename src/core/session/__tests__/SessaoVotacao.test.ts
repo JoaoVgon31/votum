@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   type Cedula,
   CedulaDuplicadaError,
+  EleitorJaVotouError,
   OperacaoInvalidaError,
   SessaoNaoAbertaError,
   SessaoVotacao,
@@ -337,6 +338,48 @@ describe('SessaoVotacao - Gerenciamento do ciclo de vida', () => {
       expect(sessao.totalCedulas).toBe(1);
       expect(sessao.cedulas).toHaveLength(1);
       expect(sessao.cedulas[0].conteudo).toBe('CHAPA_1');
+    });
+  });
+
+  describe('Rastreio de presença desvinculado da cédula', () => {
+    it('deve inicializar sem nenhuma presença registrada', () => {
+      const sessao = criarSessaoExemplo();
+      expect(sessao.totalPresencas).toBe(0);
+      expect(sessao.jaRegistrouPresenca('202601')).toBe(false);
+    });
+
+    it('deve marcar a presença do eleitor e incrementar totalPresencas', () => {
+      const sessao = criarSessaoExemplo();
+
+      sessao.registrarPresenca('202601');
+
+      expect(sessao.jaRegistrouPresenca('202601')).toBe(true);
+      expect(sessao.totalPresencas).toBe(1);
+    });
+
+    it('deve lançar EleitorJaVotouError ao marcar presença do mesmo eleitor duas vezes', () => {
+      const sessao = criarSessaoExemplo();
+      sessao.registrarPresenca('202601');
+
+      expect(() => {
+        sessao.registrarPresenca('202601');
+      }).toThrow(EleitorJaVotouError);
+      expect(sessao.totalPresencas).toBe(1);
+    });
+
+    it('deve limpar as presenças registradas, além das cédulas, ao cancelar a sessão', () => {
+      const sessao = criarSessaoExemplo();
+      sessao.agendar();
+      sessao.abrir();
+
+      sessao.registrarVoto(criarCedula('v1', 'CHAPA_1'));
+      sessao.registrarPresenca('202601');
+      expect(sessao.totalPresencas).toBe(1);
+
+      sessao.cancelar();
+
+      expect(sessao.totalPresencas).toBe(0);
+      expect(sessao.jaRegistrouPresenca('202601')).toBe(false);
     });
   });
 });

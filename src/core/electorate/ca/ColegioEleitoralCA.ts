@@ -8,7 +8,9 @@ export class ColegioEleitoralCA implements ColegioEleitoral {
   constructor(
     eleitoresAptos: readonly string[] = eleitoresAptosCA.eleitoresAptos,
   ) {
-    this.eleitoresAptos = new Set(eleitoresAptos);
+    this.eleitoresAptos = new Set(
+      eleitoresAptos.map((identificador) => identificador.trim()),
+    );
   }
 
   public verificarAptidao(identificador: string): void {
