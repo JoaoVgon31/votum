@@ -197,6 +197,18 @@ describe('ApuradorTurnoUnico - Particionamento em classes de equivalência', () 
       ).toThrow(ParametrosApuracaoInvalidosError);
     });
 
+    it('[Classe inválida: nome reservado BRANCO] deve recusar chapa com a string literal "BRANCO"', () => {
+      expect(() =>
+        new ApuradorTurnoUnico().apurar(['A', 'BRANCO'], ['A']),
+      ).toThrow(ParametrosApuracaoInvalidosError);
+    });
+
+    it('[Classe inválida: nome reservado NULO] deve recusar chapa com a string literal "NULO"', () => {
+      expect(() =>
+        new ApuradorTurnoUnico().apurar(['A', 'NULO'], ['A']),
+      ).toThrow(ParametrosApuracaoInvalidosError);
+    });
+
     it('[Classe inválida: identificador vazio] deve recusar chapa com identificador vazio', () => {
       expect(() => new ApuradorTurnoUnico().apurar(['', 'B'], ['', 'B'])).toThrow(
         ParametrosApuracaoInvalidosError,
