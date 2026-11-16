@@ -36,6 +36,13 @@ describe('ColegioEleitoralCA - Importação do colégio eleitoral e validação 
       }).not.toThrow();
     });
 
+    it('deve validar a matrícula sem espaços quando a entrada no colégio eleitoral possui espaços nas pontas', () => {
+      const colegioEleitoralCA = new ColegioEleitoralCA(['  202601  ', '202602']);
+      expect(() => {
+        colegioEleitoralCA.verificarAptidao('202601');
+      }).not.toThrow();
+    });
+
     it('deve lançar um erro quando a matrícula não consta no colégio eleitoral', () => {
       const colegioEleitoralCA = new ColegioEleitoralCA(colegioEleitoralCAMock);
       expect(() => {
