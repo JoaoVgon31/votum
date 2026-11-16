@@ -171,6 +171,43 @@ describe('Ata de resultado', () => {
         ),
       ).not.toThrow();
     });
+
+    it('deve aceitar total de presenças igual ao total de eleitores', () => {
+      expect(() =>
+        gerarAta(
+          criarDados({
+            totalPresencas: 100,
+            totalVotos: 100,
+            totalEleitores: 100,
+          }),
+        ),
+      ).not.toThrow();
+    });
+
+    it('deve aceitar o limite mínimo de 1 eleitor no colégio eleitoral', () => {
+      expect(() =>
+        gerarAta(
+          criarDados({
+            totalEleitores: 1,
+            totalPresencas: 1,
+            totalVotos: 1,
+          }),
+        ),
+      ).not.toThrow();
+    });
+
+    it('deve aceitar o limite mínimo de 0 presenças e 0 votos', () => {
+      expect(() =>
+        gerarAta(
+          criarDados({
+            status: StatusFinalSessao.DESERTA,
+            totalEleitores: 10,
+            totalPresencas: 0,
+            totalVotos: 0,
+          }),
+        ),
+      ).not.toThrow();
+    });
   });
 
   describe('integração com o AvaliadorQuorum', () => {
