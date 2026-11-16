@@ -83,6 +83,60 @@ describe('ProcessoEleitoral - Orquestração de Electorate e Session (Facade)', 
       expect(sessao.jaRegistrouPresenca('202601')).toBe(true);
     });
 
+    it('deve retornar um comprovante (identificador único e não vazio) ao registrar o voto com sucesso', () => {
+      const processo = new ProcessoEleitoral(
+        new ColegioEleitoralCA(eleitoresAptos),
+      );
+      const sessao = criarSessaoAberta();
+
+      const comprovante = processo.registrarVoto(sessao, '202601', {
+        id: 'cedula-1',
+        conteudo: 'CHAPA_A',
+        registradoEm: new Date(),
+      });
+
+      expect(typeof comprovante).toBe('string');
+      expect(comprovante.length).toBeGreaterThan(0);
+    });
+
+    it('deve retornar comprovantes diferentes para votos diferentes', () => {
+      const processo = new ProcessoEleitoral(
+        new ColegioEleitoralCA(eleitoresAptos),
+      );
+      const sessao = criarSessaoAberta();
+
+      const comprovante1 = processo.registrarVoto(sessao, '202601', {
+        id: 'cedula-1',
+        conteudo: 'CHAPA_A',
+        registradoEm: new Date(),
+      });
+      const comprovante2 = processo.registrarVoto(sessao, '202602', {
+        id: 'cedula-2',
+        conteudo: 'CHAPA_B',
+        registradoEm: new Date(),
+      });
+
+      expect(comprovante1).not.toBe(comprovante2);
+    });
+
+    it('não deve incluir o identificador do eleitor na cédula armazenada na urna (separação estrutural)', () => {
+      const processo = new ProcessoEleitoral(
+        new ColegioEleitoralCA(eleitoresAptos),
+      );
+      const sessao = criarSessaoAberta();
+
+      processo.registrarVoto(sessao, '202601', {
+        id: 'cedula-1',
+        conteudo: 'CHAPA_A',
+        registradoEm: new Date(),
+      });
+
+      expect(sessao.cedulas[0]).not.toHaveProperty('identificadorEleitor');
+      expect(Object.keys(sessao.cedulas[0])).toEqual(
+        expect.arrayContaining(['id', 'conteudo', 'registradoEm']),
+      );
+    });
+
     it('deve lançar EleitorJaVotouError e não registrar o segundo voto quando o eleitor já votou', () => {
       const processo = new ProcessoEleitoral(
         new ColegioEleitoralCA(eleitoresAptos),

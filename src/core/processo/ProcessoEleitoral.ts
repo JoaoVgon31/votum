@@ -36,17 +36,23 @@ export class ProcessoEleitoral {
     this.apurador = apurador;
   }
 
+  /**
+   * Registra o voto e devolve um comprovante: um identificador único,
+   * desvinculado da cédula e do eleitor, que serve só para o eleitor
+   * conferir depois que seu voto foi depositado.
+   */
   public registrarVoto(
     sessao: SessaoVotacao,
     identificadorEleitor: string,
     cedula: Cedula,
-  ): void {
+  ): string {
     this.colegioEleitoral.verificarAptidao(identificadorEleitor);
     if (sessao.jaRegistrouPresenca(identificadorEleitor)) {
       throw new EleitorJaVotouError(identificadorEleitor);
     }
     sessao.registrarVoto(cedula);
     sessao.registrarPresenca(identificadorEleitor);
+    return crypto.randomUUID();
   }
 
   public apurarResultado(
