@@ -12,6 +12,7 @@ import {
 import type { ResultadoQuorum } from '../quorum/EstrategiaQuorum.ts';
 import type { StatusFinalSessao } from '../quorum/StatusFinalSessao.ts';
 import type { Cedula } from '../session/Cedula.ts';
+import { EleitorJaVotouError } from '../session/errors/SessaoError.ts';
 import type { SessaoVotacao } from '../session/SessaoVotacao.ts';
 
 export interface ResultadoProcesso {
@@ -41,7 +42,11 @@ export class ProcessoEleitoral {
     cedula: Cedula,
   ): void {
     this.colegioEleitoral.verificarAptidao(identificadorEleitor);
+    if (sessao.jaRegistrouPresenca(identificadorEleitor)) {
+      throw new EleitorJaVotouError(identificadorEleitor);
+    }
     sessao.registrarVoto(cedula);
+    sessao.registrarPresenca(identificadorEleitor);
   }
 
   public apurarResultado(

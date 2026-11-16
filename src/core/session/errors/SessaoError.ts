@@ -35,3 +35,15 @@ export class CedulaDuplicadaError extends OperacaoInvalidaError {
   }
 }
 
+export class EleitorJaVotouError extends OperacaoInvalidaError {
+  readonly identificadorEleitor: string;
+
+  constructor(identificadorEleitor: string) {
+    super(
+      `Não é permitido registrar novo voto: o eleitor com identificador ${identificadorEleitor} já votou nesta sessão.`,
+    );
+    this.identificadorEleitor = identificadorEleitor;
+    this.name = 'EleitorJaVotouError';
+  }
+}
+

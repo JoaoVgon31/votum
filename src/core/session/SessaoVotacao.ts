@@ -1,6 +1,7 @@
 import type { Cedula } from './Cedula.ts';
 import { criarEstado } from './estado/estados.ts';
 import type { EstadoSessao } from './estado/EstadoSessao.ts';
+import { ListaPresenca } from './ListaPresenca.ts';
 import { Urna } from './Urna.ts';
 import { StatusSessao } from './StatusSessao.ts';
 
@@ -13,6 +14,7 @@ export class SessaoVotacao {
   public readonly titulo: string;
   private _estado: EstadoSessao;
   private readonly _urna: Urna = new Urna();
+  private readonly _listaPresenca: ListaPresenca = new ListaPresenca();
 
   constructor(id: string, titulo: string) {
     this.id = id;
@@ -33,6 +35,14 @@ export class SessaoVotacao {
    */
   public get cedulas(): readonly Cedula[] {
     return this._urna.listar();
+  }
+
+  /**
+   * Quantidade de eleitores distintos que já tiveram presença registrada
+   * nesta sessão. Fica desvinculada do conteúdo das cédulas na urna.
+   */
+  public get totalPresencas(): number {
+    return this._listaPresenca.total;
   }
 
   /**
@@ -81,10 +91,27 @@ export class SessaoVotacao {
   }
 
   /**
-   * Cancela a sessão de votação e descarta todas as cédulas em memória.
+   * Diz se o eleitor já tem presença registrada nesta sessão, sem revelar
+   * nada sobre o conteúdo do voto.
+   */
+  public jaRegistrouPresenca(identificadorEleitor: string): boolean {
+    return this._listaPresenca.contem(identificadorEleitor);
+  }
+
+  /**
+   * Marca a presença do eleitor, desvinculada da cédula registrada na urna.
+   * Rejeita um eleitor que já tenha presença registrada nesta sessão.
+   */
+  public registrarPresenca(identificadorEleitor: string): void {
+    this._listaPresenca.registrar(identificadorEleitor);
+  }
+
+  /**
+   * Cancela a sessão de votação e descarta todas as cédulas e presenças em memória.
    */
   public cancelar(): void {
     this._estado = criarEstado(this._estado.cancelar());
     this._urna.esvaziar();
+    this._listaPresenca.esvaziar();
   }
 }

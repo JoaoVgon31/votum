@@ -3,6 +3,7 @@ import { ColegioEleitoralCA } from '../../electorate/ca/ColegioEleitoralCA.ts';
 import { EleitorInaptoError } from '../../electorate/errors/ColegioEleitoralError.ts';
 import { StatusFinalSessao } from '../../quorum/StatusFinalSessao.ts';
 import type { Cedula } from '../../session/Cedula.ts';
+import { EleitorJaVotouError } from '../../session/errors/SessaoError.ts';
 import { SessaoVotacao } from '../../session/SessaoVotacao.ts';
 import { ProcessoEleitoral } from '../ProcessoEleitoral.ts';
 
@@ -65,6 +66,43 @@ describe('ProcessoEleitoral - Orquestração de Electorate e Session (Facade)', 
         });
       }).toThrow(EleitorInaptoError);
       expect(sessao.totalCedulas).toBe(0);
+    });
+
+    it('deve marcar a presença do eleitor ao registrar o voto com sucesso', () => {
+      const processo = new ProcessoEleitoral(
+        new ColegioEleitoralCA(eleitoresAptos),
+      );
+      const sessao = criarSessaoAberta();
+
+      processo.registrarVoto(sessao, '202601', {
+        id: 'cedula-1',
+        conteudo: 'CHAPA_A',
+        registradoEm: new Date(),
+      });
+
+      expect(sessao.jaRegistrouPresenca('202601')).toBe(true);
+    });
+
+    it('deve lançar EleitorJaVotouError e não registrar o segundo voto quando o eleitor já votou', () => {
+      const processo = new ProcessoEleitoral(
+        new ColegioEleitoralCA(eleitoresAptos),
+      );
+      const sessao = criarSessaoAberta();
+
+      processo.registrarVoto(sessao, '202601', {
+        id: 'cedula-1',
+        conteudo: 'CHAPA_A',
+        registradoEm: new Date(),
+      });
+
+      expect(() => {
+        processo.registrarVoto(sessao, '202601', {
+          id: 'cedula-2',
+          conteudo: 'CHAPA_B',
+          registradoEm: new Date(),
+        });
+      }).toThrow(EleitorJaVotouError);
+      expect(sessao.totalCedulas).toBe(1);
     });
   });
 
