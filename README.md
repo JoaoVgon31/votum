@@ -8,3 +8,11 @@ Plataforma web modular para orquestração de processos deliberativos e votaçõ
 |João Vitor Gonçalves Oliveira|237871|
 |Everton Mendes de Almeida|260426|
 |Hunter Soares do Carmo|186289|
+
+# Como rodar
+Requer Node 22.
+```bash
+npm ci
+npm run dev        # abre em http://localhost:5173
+npm run test:run   # testes
+```
