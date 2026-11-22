@@ -2,15 +2,18 @@ import {
   ApuradorTurnoUnico,
   type ResultadoApuracao,
 } from '../apuracao/ApuradorTurnoUnico.ts';
-import { gerarAta } from '../ata/gerarAta.ts';
 import type { AtaResultado } from '../ata/AtaResultado.ts';
+import { gerarAta } from '../ata/gerarAta.ts';
 import type { ColegioEleitoral } from '../electorate/ColegioEleitoral.ts';
+import { gerarMural } from '../mural/gerarMural.ts';
+import type { ItemMural } from '../mural/ItemMural.ts';
 import {
   AvaliadorQuorum,
   type SessaoAvaliavelPorQuorum,
 } from '../quorum/AvaliadorQuorum.ts';
 import type { ResultadoQuorum } from '../quorum/EstrategiaQuorum.ts';
 import type { StatusFinalSessao } from '../quorum/StatusFinalSessao.ts';
+import { gerarRecibo } from '../recibo/gerarRecibo.ts';
 import type { Cedula } from '../session/Cedula.ts';
 import { EleitorJaVotouError } from '../session/errors/SessaoError.ts';
 import type { SessaoVotacao } from '../session/SessaoVotacao.ts';
@@ -37,22 +40,22 @@ export class ProcessoEleitoral {
   }
 
   /**
-   * Registra o voto e devolve um comprovante: um identificador único,
-   * desvinculado da cédula e do eleitor, que serve só para o eleitor
+   * Registra o voto e devolve um comprovante: um hash derivado da própria
+   * cédula selada, desvinculado do eleitor, que serve só para o eleitor
    * conferir depois que seu voto foi depositado.
    */
-  public registrarVoto(
+  public async registrarVoto(
     sessao: SessaoVotacao,
     identificadorEleitor: string,
     cedula: Cedula,
-  ): string {
+  ): Promise<string> {
     this.colegioEleitoral.verificarAptidao(identificadorEleitor);
     if (sessao.jaRegistrouPresenca(identificadorEleitor)) {
       throw new EleitorJaVotouError(identificadorEleitor);
     }
     sessao.registrarVoto(cedula);
     sessao.registrarPresenca(identificadorEleitor);
-    return crypto.randomUUID();
+    return gerarRecibo(cedula);
   }
 
   public apurarResultado(
@@ -86,5 +89,11 @@ export class ProcessoEleitoral {
     });
 
     return { resultadoQuorum, resultadoApuracao, ata };
+  }
+
+  public gerarMuralPublico(
+    sessao: SessaoVotacao,
+  ): Promise<readonly ItemMural[]> {
+    return gerarMural(sessao.cedulas);
   }
 }

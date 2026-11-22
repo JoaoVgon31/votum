@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { ColegioEleitoralCA } from '../../electorate/ca/ColegioEleitoralCA.ts';
 import { EleitorInaptoError } from '../../electorate/errors/ColegioEleitoralError.ts';
+import { gerarMural } from '../../mural/gerarMural.ts';
 import { StatusFinalSessao } from '../../quorum/StatusFinalSessao.ts';
+import { gerarRecibo } from '../../recibo/gerarRecibo.ts';
 import type { Cedula } from '../../session/Cedula.ts';
 import { EleitorJaVotouError } from '../../session/errors/SessaoError.ts';
 import { SessaoVotacao } from '../../session/SessaoVotacao.ts';
@@ -36,13 +38,13 @@ describe('ProcessoEleitoral - Orquestração de Electorate e Session (Facade)', 
   };
 
   describe('Critério 1: Registro de voto', () => {
-    it('deve registrar o voto na sessão quando o eleitor está apto', () => {
+    it('deve registrar o voto na sessão quando o eleitor está apto', async () => {
       const processo = new ProcessoEleitoral(
         new ColegioEleitoralCA(eleitoresAptos),
       );
       const sessao = criarSessaoAberta();
 
-      processo.registrarVoto(sessao, '202601', {
+      await processo.registrarVoto(sessao, '202601', {
         id: 'cedula-1',
         conteudo: 'CHAPA_A',
         registradoEm: new Date(),
@@ -52,29 +54,29 @@ describe('ProcessoEleitoral - Orquestração de Electorate e Session (Facade)', 
       expect(sessao.cedulas[0].conteudo).toBe('CHAPA_A');
     });
 
-    it('deve lançar EleitorInaptoError e não registrar o voto quando o eleitor não consta no colégio eleitoral', () => {
+    it('deve lançar EleitorInaptoError e não registrar o voto quando o eleitor não consta no colégio eleitoral', async () => {
       const processo = new ProcessoEleitoral(
         new ColegioEleitoralCA(eleitoresAptos),
       );
       const sessao = criarSessaoAberta();
 
-      expect(() => {
+      await expect(
         processo.registrarVoto(sessao, '999999', {
           id: 'cedula-1',
           conteudo: 'CHAPA_A',
           registradoEm: new Date(),
-        });
-      }).toThrow(EleitorInaptoError);
+        }),
+      ).rejects.toThrow(EleitorInaptoError);
       expect(sessao.totalCedulas).toBe(0);
     });
 
-    it('deve marcar a presença do eleitor ao registrar o voto com sucesso', () => {
+    it('deve marcar a presença do eleitor ao registrar o voto com sucesso', async () => {
       const processo = new ProcessoEleitoral(
         new ColegioEleitoralCA(eleitoresAptos),
       );
       const sessao = criarSessaoAberta();
 
-      processo.registrarVoto(sessao, '202601', {
+      await processo.registrarVoto(sessao, '202601', {
         id: 'cedula-1',
         conteudo: 'CHAPA_A',
         registradoEm: new Date(),
@@ -83,13 +85,13 @@ describe('ProcessoEleitoral - Orquestração de Electorate e Session (Facade)', 
       expect(sessao.jaRegistrouPresenca('202601')).toBe(true);
     });
 
-    it('deve retornar um comprovante (identificador único e não vazio) ao registrar o voto com sucesso', () => {
+    it('deve retornar um comprovante (identificador único e não vazio) ao registrar o voto com sucesso', async () => {
       const processo = new ProcessoEleitoral(
         new ColegioEleitoralCA(eleitoresAptos),
       );
       const sessao = criarSessaoAberta();
 
-      const comprovante = processo.registrarVoto(sessao, '202601', {
+      const comprovante = await processo.registrarVoto(sessao, '202601', {
         id: 'cedula-1',
         conteudo: 'CHAPA_A',
         registradoEm: new Date(),
@@ -99,18 +101,38 @@ describe('ProcessoEleitoral - Orquestração de Electorate e Session (Facade)', 
       expect(comprovante.length).toBeGreaterThan(0);
     });
 
-    it('deve retornar comprovantes diferentes para votos diferentes', () => {
+    it('deve retornar como comprovante o recibo (hash) derivado da própria cédula selada', async () => {
+      const processo = new ProcessoEleitoral(
+        new ColegioEleitoralCA(eleitoresAptos),
+      );
+      const sessao = criarSessaoAberta();
+      const cedula: Cedula = {
+        id: 'cedula-1',
+        conteudo: 'CHAPA_A',
+        registradoEm: new Date('2026-11-20T15:30:00.000Z'),
+      };
+
+      const comprovante = await processo.registrarVoto(
+        sessao,
+        '202601',
+        cedula,
+      );
+
+      expect(comprovante).toBe(await gerarRecibo(cedula));
+    });
+
+    it('deve retornar comprovantes diferentes para votos diferentes', async () => {
       const processo = new ProcessoEleitoral(
         new ColegioEleitoralCA(eleitoresAptos),
       );
       const sessao = criarSessaoAberta();
 
-      const comprovante1 = processo.registrarVoto(sessao, '202601', {
+      const comprovante1 = await processo.registrarVoto(sessao, '202601', {
         id: 'cedula-1',
         conteudo: 'CHAPA_A',
         registradoEm: new Date(),
       });
-      const comprovante2 = processo.registrarVoto(sessao, '202602', {
+      const comprovante2 = await processo.registrarVoto(sessao, '202602', {
         id: 'cedula-2',
         conteudo: 'CHAPA_B',
         registradoEm: new Date(),
@@ -119,13 +141,13 @@ describe('ProcessoEleitoral - Orquestração de Electorate e Session (Facade)', 
       expect(comprovante1).not.toBe(comprovante2);
     });
 
-    it('não deve incluir o identificador do eleitor na cédula armazenada na urna (separação estrutural)', () => {
+    it('não deve incluir o identificador do eleitor na cédula armazenada na urna (separação estrutural)', async () => {
       const processo = new ProcessoEleitoral(
         new ColegioEleitoralCA(eleitoresAptos),
       );
       const sessao = criarSessaoAberta();
 
-      processo.registrarVoto(sessao, '202601', {
+      await processo.registrarVoto(sessao, '202601', {
         id: 'cedula-1',
         conteudo: 'CHAPA_A',
         registradoEm: new Date(),
@@ -137,25 +159,25 @@ describe('ProcessoEleitoral - Orquestração de Electorate e Session (Facade)', 
       );
     });
 
-    it('deve lançar EleitorJaVotouError e não registrar o segundo voto quando o eleitor já votou', () => {
+    it('deve lançar EleitorJaVotouError e não registrar o segundo voto quando o eleitor já votou', async () => {
       const processo = new ProcessoEleitoral(
         new ColegioEleitoralCA(eleitoresAptos),
       );
       const sessao = criarSessaoAberta();
 
-      processo.registrarVoto(sessao, '202601', {
+      await processo.registrarVoto(sessao, '202601', {
         id: 'cedula-1',
         conteudo: 'CHAPA_A',
         registradoEm: new Date(),
       });
 
-      expect(() => {
+      await expect(
         processo.registrarVoto(sessao, '202601', {
           id: 'cedula-2',
           conteudo: 'CHAPA_B',
           registradoEm: new Date(),
-        });
-      }).toThrow(EleitorJaVotouError);
+        }),
+      ).rejects.toThrow(EleitorJaVotouError);
       expect(sessao.totalCedulas).toBe(1);
     });
   });
@@ -214,6 +236,20 @@ describe('ProcessoEleitoral - Orquestração de Electorate e Session (Facade)', 
       expect(resultadoQuorum.atingido).toBe(true);
       expect(ata.status).toBe(StatusFinalSessao.CONCLUIDA);
       expect(ata.vencedor).toBeNull();
+    });
+  });
+
+  describe('Critério 3: Mural público de auditoria', () => {
+    it('deve gerar o mural público com um item por cédula depositada na sessão', async () => {
+      const processo = new ProcessoEleitoral(
+        new ColegioEleitoralCA(eleitoresAptos),
+      );
+      const sessao = criarSessaoAberta();
+      votar(sessao, 'cedula', ['CHAPA_A', 'CHAPA_B']);
+
+      const mural = await processo.gerarMuralPublico(sessao);
+
+      expect(mural).toEqual(await gerarMural(sessao.cedulas));
     });
   });
 });
