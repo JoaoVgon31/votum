@@ -65,3 +65,15 @@ export class UnidadeInadimplenteError extends CondominioError {
     this.name = 'UnidadeInadimplenteError';
   }
 }
+
+export class PautaNaoEncerradaParaAtaError extends CondominioError {
+  readonly pautaId: string;
+
+  constructor(pautaId: string) {
+    super(
+      `A pauta "${pautaId}" ainda não foi encerrada e não pode ser consolidada na ata da assembleia.`,
+    );
+    this.pautaId = pautaId;
+    this.name = 'PautaNaoEncerradaParaAtaError';
+  }
+}
