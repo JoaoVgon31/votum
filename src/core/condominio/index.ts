@@ -1,7 +1,17 @@
 export {
+  type AtaAssembleiaCondominial,
+  type DadosAtaAssembleia,
+  formatarAtaAssembleiaComoJson,
+  formatarAtaAssembleiaComoTexto,
+  gerarAtaAssembleia,
+  type RegistroVotoNominalAta,
+  type ResultadoPautaAta,
+} from './AtaAssembleiaCondominial.ts';
+export {
   CondominioError,
   ParametrosCondominioInvalidosError,
   PautaEncerradaError,
+  PautaNaoEncerradaParaAtaError,
   ProprietarioSemUnidadesError,
   UnidadeInadimplenteError,
   UnidadeJaVotouError,

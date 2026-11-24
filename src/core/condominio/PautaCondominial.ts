@@ -35,8 +35,13 @@ export interface AcessoPautaCondominial {
 
 export interface VotoUnidadeCondominial {
   readonly unidade: UnidadeCondominial;
+  readonly unidadeId: string;
+  readonly numeroUnidade: string;
+  readonly bloco: string;
+  readonly nomeTitular: string;
   readonly opcao: OpcaoVotoCondominio;
   readonly pesoFracaoIdeal: number;
+  readonly registradoEm: string;
 }
 
 export interface ResultadoPonderadoPauta {
@@ -230,11 +235,12 @@ export class PautaCondominial {
 
   /**
    * Registra o voto de uma única unidade ponderado automaticamente pela sua
-   * fração ideal.
+   * fração ideal e contendo os dados nominais da unidade e titular.
    */
   public registrarVotoUnidade(
     unidadeId: string,
     opcao: OpcaoVotoCondominio,
+    registradoEm: Date = new Date(),
   ): VotoUnidadeCondominial {
     this.validarOpcao(opcao);
     const cedula = this.abrirCedulaUnidade(unidadeId);
@@ -242,8 +248,13 @@ export class PautaCondominial {
 
     const registro: VotoUnidadeCondominial = {
       unidade,
+      unidadeId: unidade.id,
+      numeroUnidade: unidade.numero,
+      bloco: unidade.bloco,
+      nomeTitular: unidade.nomeTitular,
       opcao,
       pesoFracaoIdeal: cedula.fracaoIdealTotal,
+      registradoEm: registradoEm.toISOString(),
     };
 
     this.votosPorUnidade.set(unidade.id, registro);
@@ -252,21 +263,29 @@ export class PautaCondominial {
 
   /**
    * Registra o voto em bloco para todas as unidades pertencentes ao mesmo
-   * proprietário, somando suas frações ideais correspondentes.
+   * proprietário, somando suas frações ideais correspondentes e registrando
+   * nominalmente cada unidade.
    */
   public registrarVotoEmBloco(
     proprietarioId: string,
     opcao: OpcaoVotoCondominio,
+    registradoEm: Date = new Date(),
   ): readonly VotoUnidadeCondominial[] {
     this.validarOpcao(opcao);
     const cedula = this.abrirCedulaProprietario(proprietarioId);
+    const dataIso = registradoEm.toISOString();
 
     const registros: VotoUnidadeCondominial[] = cedula.unidades.map(
       (unidade) => {
         const registro: VotoUnidadeCondominial = {
           unidade,
+          unidadeId: unidade.id,
+          numeroUnidade: unidade.numero,
+          bloco: unidade.bloco,
+          nomeTitular: unidade.nomeTitular,
           opcao,
           pesoFracaoIdeal: arredondarFracao(unidade.fracaoIdeal),
+          registradoEm: dataIso,
         };
         this.votosPorUnidade.set(unidade.id, registro);
         return registro;
