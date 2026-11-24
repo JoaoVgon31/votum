@@ -9,6 +9,14 @@ import {
   OpcaoVotoCondominio,
 } from './OpcaoVotoCondominio.ts';
 import {
+  avaliarQuorumTempoReal,
+  calcularStatusDeliberacaoFinal,
+  StatusDeliberacaoPauta,
+  type StatusQuorumTempoReal,
+  TipoQuorumCondominial,
+  validarTipoQuorumCondominial,
+} from './QuorumCondominial.ts';
+import {
   arredondarFracao,
   type CadastroCondominio,
   type CedulaCondominialAberta,
@@ -48,6 +56,9 @@ export interface ResultadoPonderadoPauta {
   readonly pautaId: string;
   readonly titulo: string;
   readonly encerrada: boolean;
+  readonly tipoQuorum: TipoQuorumCondominial;
+  readonly quorumDeliberacaoAtingido: boolean;
+  readonly statusDeliberacao: StatusDeliberacaoPauta;
   /** Soma das frações ideais das unidades que votaram Favorável. */
   readonly fracaoFavoravel: number;
   /** Soma das frações ideais das unidades que votaram Contrário. */
@@ -69,18 +80,26 @@ export interface ResultadoPonderadoPauta {
 
 /**
  * Gerencia a votação ponderada por fração ideal de uma pauta de assembleia
- * condominial, incluindo verificação de adimplência, abertura de cédula,
- * voto individual por unidade, voto em bloco por proprietário e apuração.
+ * condominial, incluindo verificação de adimplência, controle de quórum
+ * diferenciado por pauta, voto individual, voto em bloco e apuração.
  */
 export class PautaCondominial {
   public readonly id: string;
   public readonly titulo: string;
+  public readonly tipoQuorum: TipoQuorumCondominial;
   private readonly cadastro: CadastroCondominio;
   private readonly votosPorUnidade: Map<string, VotoUnidadeCondominial> =
     new Map<string, VotoUnidadeCondominial>();
   private _encerrada = false;
+  private _statusDeliberacao: StatusDeliberacaoPauta =
+    StatusDeliberacaoPauta.EM_VOTACAO;
 
-  constructor(id: string, titulo: string, cadastro: CadastroCondominio) {
+  constructor(
+    id: string,
+    titulo: string,
+    cadastro: CadastroCondominio,
+    tipoQuorum: TipoQuorumCondominial = TipoQuorumCondominial.MAIORIA_SIMPLES_PRESENTES,
+  ) {
     const idLimpo = id.trim();
     const tituloLimpo = titulo.trim();
 
@@ -90,13 +109,37 @@ export class PautaCondominial {
       );
     }
 
+    validarTipoQuorumCondominial(tipoQuorum);
+
     this.id = idLimpo;
     this.titulo = tituloLimpo;
     this.cadastro = cadastro;
+    this.tipoQuorum = tipoQuorum;
   }
 
   public get encerrada(): boolean {
     return this._encerrada;
+  }
+
+  public get statusDeliberacao(): StatusDeliberacaoPauta {
+    return this._statusDeliberacao;
+  }
+
+  /**
+   * Indica em tempo real para o painel do administrador se o quórum mínimo
+   * para deliberação desta pauta já foi atingido.
+   */
+  public verificarQuorumTempoReal(): StatusQuorumTempoReal {
+    let somaVotante = 0;
+    for (const voto of this.votosPorUnidade.values()) {
+      somaVotante += voto.pesoFracaoIdeal;
+    }
+
+    return avaliarQuorumTempoReal(
+      this.tipoQuorum,
+      arredondarFracao(somaVotante),
+      this.cadastro.fracaoIdealTotal,
+    );
   }
 
   /**
@@ -304,8 +347,8 @@ export class PautaCondominial {
   }
 
   /**
-   * Encerra a votação da pauta e devolve o resultado final ponderado pelas
-   * frações ideais.
+   * Encerra a votação da pauta, calcula e atribui automaticamente o status
+   * ("Aprovada", "Rejeitada", "Quórum Insuficiente") e devolve o resultado final.
    */
   public encerrarVotacao(): ResultadoPonderadoPauta {
     this.garantirPautaAberta();
@@ -359,6 +402,23 @@ export class PautaCondominial {
     const fracaoTotalVotante = arredondarFracao(
       fracaoFavoravel + fracaoContraria + fracaoAbstencao,
     );
+    const fracaoTotalCondominio = this.cadastro.fracaoIdealTotal;
+
+    const statusQuorum = avaliarQuorumTempoReal(
+      this.tipoQuorum,
+      fracaoTotalVotante,
+      fracaoTotalCondominio,
+    );
+
+    if (this._encerrada) {
+      this._statusDeliberacao = calcularStatusDeliberacaoFinal(
+        this.tipoQuorum,
+        fracaoFavoravel,
+        fracaoContraria,
+        fracaoTotalVotante,
+        fracaoTotalCondominio,
+      );
+    }
 
     const calcularPercentual = (fracao: number): number =>
       fracaoTotalVotante > 0
@@ -369,11 +429,14 @@ export class PautaCondominial {
       pautaId: this.id,
       titulo: this.titulo,
       encerrada: this._encerrada,
+      tipoQuorum: this.tipoQuorum,
+      quorumDeliberacaoAtingido: statusQuorum.quorumDeliberacaoAtingido,
+      statusDeliberacao: this._statusDeliberacao,
       fracaoFavoravel,
       fracaoContraria,
       fracaoAbstencao,
       fracaoTotalVotante,
-      fracaoTotalCondominio: this.cadastro.fracaoIdealTotal,
+      fracaoTotalCondominio,
       percentualFavoravel: calcularPercentual(fracaoFavoravel),
       percentualContrario: calcularPercentual(fracaoContraria),
       percentualAbstencao: calcularPercentual(fracaoAbstencao),

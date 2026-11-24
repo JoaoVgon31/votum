@@ -101,6 +101,8 @@ export function formatarAtaAssembleiaComoTexto(
   for (const [indice, pauta] of ata.pautas.entries()) {
     linhas.push('');
     linhas.push(`PAUTA ${String(indice + 1)}: ${pauta.titulo} (${pauta.pautaId})`);
+    linhas.push(`Quórum exigido: ${pauta.tipoQuorum}`);
+    linhas.push(`Status da deliberação: ${pauta.statusDeliberacao}`);
     linhas.push(
       `Favorável: ${String(pauta.fracaoFavoravel)} (${pauta.percentualFavoravel.toFixed(2).replace('.', ',')}%)`,
     );
