@@ -53,3 +53,15 @@ export class PautaEncerradaError extends CondominioError {
     this.name = 'PautaEncerradaError';
   }
 }
+
+export class UnidadeInadimplenteError extends CondominioError {
+  readonly unidadeId: string;
+
+  constructor(unidadeId: string) {
+    super(
+      `A unidade "${unidadeId}" possui pendências financeiras em aberto e está impedida de votar na assembleia, podendo apenas acompanhar como ouvinte.`,
+    );
+    this.unidadeId = unidadeId;
+    this.name = 'UnidadeInadimplenteError';
+  }
+}

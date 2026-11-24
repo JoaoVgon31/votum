@@ -12,6 +12,8 @@ export interface UnidadeCondominial {
   readonly nomeTitular: string;
   /** Fração ideal da unidade (ex.: percentual ou peso patrimonial > 0). */
   readonly fracaoIdeal: number;
+  /** Indica se a unidade está em dia com suas obrigações financeiras (padrão: true). */
+  readonly adimplente?: boolean;
 }
 
 export interface CedulaCondominialAberta {
@@ -24,7 +26,7 @@ export function arredondarFracao(valor: number): number {
 }
 
 /**
- * Cadastro das unidades condominiais e suas respectivas frações ideais.
+ * Cadastro das unidades condominiais, suas frações ideais e situação de adimplência.
  */
 export class CadastroCondominio {
   private readonly unidadesPorId: Map<string, UnidadeCondominial>;
@@ -79,6 +81,7 @@ export class CadastroCondominio {
         bloco,
         proprietarioId,
         nomeTitular,
+        adimplente: unidade.adimplente ?? true,
       });
     }
 
@@ -121,5 +124,22 @@ export class CadastroCondominio {
       throw new ProprietarioSemUnidadesError(idLimpo);
     }
     return unidades;
+  }
+
+  /**
+   * Permite ao administrador da sessão atualizar manualmente a situação de
+   * adimplência financeira de uma unidade.
+   */
+  public atualizarAdimplenciaUnidade(
+    unidadeId: string,
+    adimplente: boolean,
+  ): UnidadeCondominial {
+    const unidadeAtual = this.obterUnidade(unidadeId);
+    const unidadeAtualizada: UnidadeCondominial = {
+      ...unidadeAtual,
+      adimplente,
+    };
+    this.unidadesPorId.set(unidadeAtual.id, unidadeAtualizada);
+    return unidadeAtualizada;
   }
 }

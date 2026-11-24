@@ -3,6 +3,7 @@ export {
   ParametrosCondominioInvalidosError,
   PautaEncerradaError,
   ProprietarioSemUnidadesError,
+  UnidadeInadimplenteError,
   UnidadeJaVotouError,
   UnidadeNaoEncontradaError,
 } from './errors/CondominioError.ts';
@@ -11,6 +12,8 @@ export {
   OpcaoVotoCondominio,
 } from './OpcaoVotoCondominio.ts';
 export {
+  type AcessoPautaCondominial,
+  ModoAcessoPauta,
   PautaCondominial,
   type ResultadoPonderadoPauta,
   type VotoUnidadeCondominial,

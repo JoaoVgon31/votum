@@ -1,6 +1,7 @@
 import {
   ParametrosCondominioInvalidosError,
   PautaEncerradaError,
+  UnidadeInadimplenteError,
   UnidadeJaVotouError,
 } from './errors/CondominioError.ts';
 import {
@@ -13,6 +14,24 @@ import {
   type CedulaCondominialAberta,
   type UnidadeCondominial,
 } from './UnidadeCondominial.ts';
+
+export const ModoAcessoPauta = {
+  VOTANTE: 'Votante',
+  OUVINTE: 'Ouvinte',
+} as const;
+
+export type ModoAcessoPauta =
+  (typeof ModoAcessoPauta)[keyof typeof ModoAcessoPauta];
+
+export interface AcessoPautaCondominial {
+  readonly pautaId: string;
+  readonly titulo: string;
+  readonly modoAcesso: ModoAcessoPauta;
+  readonly podeVotar: boolean;
+  readonly aviso: string | null;
+  readonly unidadesAptas: readonly UnidadeCondominial[];
+  readonly unidadesInadimplentes: readonly UnidadeCondominial[];
+}
 
 export interface VotoUnidadeCondominial {
   readonly unidade: UnidadeCondominial;
@@ -45,8 +64,8 @@ export interface ResultadoPonderadoPauta {
 
 /**
  * Gerencia a votação ponderada por fração ideal de uma pauta de assembleia
- * condominial, incluindo abertura de cédula, voto individual por unidade,
- * voto em bloco por proprietário e apuração preliminar/final.
+ * condominial, incluindo verificação de adimplência, abertura de cédula,
+ * voto individual por unidade, voto em bloco por proprietário e apuração.
  */
 export class PautaCondominial {
   public readonly id: string;
@@ -76,12 +95,99 @@ export class PautaCondominial {
   }
 
   /**
+   * Valida a situação de adimplência da unidade ao acessar a pauta.
+   * Caso a unidade esteja inadimplente, restringe a votação, devolve aviso
+   * explicativo e permite acesso apenas como ouvinte.
+   */
+  public acessarPautaUnidade(unidadeId: string): AcessoPautaCondominial {
+    const unidade = this.cadastro.obterUnidade(unidadeId);
+
+    if (unidade.adimplente === false) {
+      return {
+        pautaId: this.id,
+        titulo: this.titulo,
+        modoAcesso: ModoAcessoPauta.OUVINTE,
+        podeVotar: false,
+        aviso: `A unidade "${unidade.id}" possui pendências financeiras em aberto e está restrita ao acompanhamento da discussão como ouvinte, sem direito a voto.`,
+        unidadesAptas: [],
+        unidadesInadimplentes: [unidade],
+      };
+    }
+
+    return {
+      pautaId: this.id,
+      titulo: this.titulo,
+      modoAcesso: ModoAcessoPauta.VOTANTE,
+      podeVotar: true,
+      aviso: null,
+      unidadesAptas: [unidade],
+      unidadesInadimplentes: [],
+    };
+  }
+
+  /**
+   * Valida a situação de adimplência de todas as unidades vinculadas a um
+   * proprietário ao acessar a pauta.
+   */
+  public acessarPautaProprietario(
+    proprietarioId: string,
+  ): AcessoPautaCondominial {
+    const unidades = this.cadastro.obterUnidadesDoProprietario(proprietarioId);
+    const unidadesAptas = unidades.filter((u) => u.adimplente !== false);
+    const unidadesInadimplentes = unidades.filter(
+      (u) => u.adimplente === false,
+    );
+
+    if (unidadesAptas.length === 0) {
+      const ids = unidadesInadimplentes.map((u) => u.id).join(', ');
+      return {
+        pautaId: this.id,
+        titulo: this.titulo,
+        modoAcesso: ModoAcessoPauta.OUVINTE,
+        podeVotar: false,
+        aviso: `As unidades (${ids}) possuem pendências financeiras em aberto e estão restritas ao acompanhamento da discussão como ouvinte, sem direito a voto.`,
+        unidadesAptas: [],
+        unidadesInadimplentes,
+      };
+    }
+
+    const aviso =
+      unidadesInadimplentes.length > 0
+        ? `As unidades (${unidadesInadimplentes.map((u) => u.id).join(', ')}) possuem pendências financeiras em aberto e foram bloqueadas para votação, permanecendo apenas como ouvintes.`
+        : null;
+
+    return {
+      pautaId: this.id,
+      titulo: this.titulo,
+      modoAcesso: ModoAcessoPauta.VOTANTE,
+      podeVotar: true,
+      aviso,
+      unidadesAptas,
+      unidadesInadimplentes,
+    };
+  }
+
+  /**
+   * Permite ao administrador da sessão atualizar manualmente o status de
+   * adimplência de uma unidade.
+   */
+  public atualizarAdimplenciaUnidade(
+    unidadeId: string,
+    adimplente: boolean,
+  ): UnidadeCondominial {
+    return this.cadastro.atualizarAdimplenciaUnidade(unidadeId, adimplente);
+  }
+
+  /**
    * Recupera a fração ideal cadastrada da unidade no momento da abertura
-   * da cédula.
+   * da cédula, bloqueando unidades inadimplentes.
    */
   public abrirCedulaUnidade(unidadeId: string): CedulaCondominialAberta {
     this.garantirPautaAberta();
     const unidade = this.cadastro.obterUnidade(unidadeId);
+    if (unidade.adimplente === false) {
+      throw new UnidadeInadimplenteError(unidade.id);
+    }
     if (this.votosPorUnidade.has(unidade.id)) {
       throw new UnidadeJaVotouError(unidade.id);
     }
@@ -94,7 +200,8 @@ export class PautaCondominial {
 
   /**
    * Recupera todas as unidades do proprietário e a soma de suas frações ideais
-   * no momento da abertura da cédula para votação em bloco.
+   * no momento da abertura da cédula para votação em bloco, bloqueando caso
+   * haja unidade inadimplente.
    */
   public abrirCedulaProprietario(
     proprietarioId: string,
@@ -103,6 +210,9 @@ export class PautaCondominial {
     const unidades = this.cadastro.obterUnidadesDoProprietario(proprietarioId);
 
     for (const unidade of unidades) {
+      if (unidade.adimplente === false) {
+        throw new UnidadeInadimplenteError(unidade.id);
+      }
       if (this.votosPorUnidade.has(unidade.id)) {
         throw new UnidadeJaVotouError(unidade.id);
       }
