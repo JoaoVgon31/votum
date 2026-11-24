@@ -29,6 +29,14 @@ export {
   type VotoUnidadeCondominial,
 } from './PautaCondominial.ts';
 export {
+  avaliarQuorumTempoReal,
+  calcularStatusDeliberacaoFinal,
+  ehTipoQuorumCondominial,
+  StatusDeliberacaoPauta,
+  type StatusQuorumTempoReal,
+  TipoQuorumCondominial,
+} from './QuorumCondominial.ts';
+export {
   arredondarFracao,
   CadastroCondominio,
   type CedulaCondominialAberta,
